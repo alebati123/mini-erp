@@ -3,11 +3,13 @@ import { useAppContext } from '../context/AppContext';
 import { Trash2, Pencil, Check, X } from 'lucide-react';
 
 const Inventory = () => {
-  const { data, deleteProductUI, editProductUI } = useAppContext();
+  const { data, deleteProductUI, editProductUI, addProductUI } = useAppContext();
   const [activeTab, setActiveTab] = useState('abshine'); // 'abshine' o 'ab3d'
   
   const [editingId, setEditingId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newProductForm, setNewProductForm] = useState({ producto: '', tipo: '', precioCompra: 0, precioVenta: 0, stock: 0, marca: 'N/A', material: 'N/A', color: 'N/A' });
 
   const handleEditClick = (item) => {
     setEditingId(item.id);
@@ -32,6 +34,22 @@ const Inventory = () => {
 
   const handleFormChange = (field, value) => {
     setEditFormData({ ...editFormData, [field]: value });
+  };
+
+  const handleAddNewProduct = () => {
+    if (!newProductForm.producto) {
+        alert("El nombre del producto es obligatorio");
+        return;
+    }
+    const finalProduct = {
+        ...newProductForm,
+        stock: parseInt(newProductForm.stock) || 0,
+        precioCompra: parseFloat(newProductForm.precioCompra) || 0,
+        precioVenta: parseFloat(newProductForm.precioVenta) || 0,
+    };
+    addProductUI(activeTab, finalProduct);
+    setIsModalOpen(false);
+    setNewProductForm({ producto: '', tipo: '', precioCompra: 0, precioVenta: 0, stock: 0, marca: 'N/A', material: 'N/A', color: 'N/A' });
   };
 
   const inventoryData = activeTab === 'abshine' ? data.abshine.inventory : data.ab3d.inventory;
@@ -61,6 +79,7 @@ const Inventory = () => {
               ab3D.impresiones
             </span>
           </button>
+          <button className="btn-primary" style={{ padding: '0.6rem 1rem', fontSize: '0.9rem', borderRadius: '8px', marginLeft: '1rem' }} onClick={() => setIsModalOpen(true)}>+ Nuevo Producto</button>
         </div>
       </div>
 
@@ -129,6 +148,68 @@ const Inventory = () => {
           </tbody>
         </table>
       </div>
+      </div>
+
+      {isModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '500px', background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: 'var(--text-primary)' }}>Añadir a {activeTab === 'abshine' ? 'Abshine' : 'ab3D'}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Producto</label>
+                <input type="text" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.producto} onChange={(e) => setNewProductForm({...newProductForm, producto: e.target.value})} placeholder="Nombre del producto" />
+              </div>
+              
+              {activeTab === 'abshine' && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Marca</label>
+                  <input type="text" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.marca} onChange={(e) => setNewProductForm({...newProductForm, marca: e.target.value})} />
+                </div>
+              )}
+
+              {activeTab === 'ab3d' && (
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Material</label>
+                    <input type="text" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.material} onChange={(e) => setNewProductForm({...newProductForm, material: e.target.value})} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Color</label>
+                    <input type="text" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.color} onChange={(e) => setNewProductForm({...newProductForm, color: e.target.value})} />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Categoría</label>
+                    <input type="text" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.tipo} onChange={(e) => setNewProductForm({...newProductForm, tipo: e.target.value})} />
+                </div>
+                <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Stock Inicial</label>
+                    <input type="number" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.stock} onChange={(e) => setNewProductForm({...newProductForm, stock: e.target.value})} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Precio Compra</label>
+                    <input type="number" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.precioCompra} onChange={(e) => setNewProductForm({...newProductForm, precioCompra: e.target.value})} />
+                </div>
+                <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Precio Venta</label>
+                    <input type="number" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.precioVenta} onChange={(e) => setNewProductForm({...newProductForm, precioVenta: e.target.value})} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button className="btn-primary" style={{ flex: 1, padding: '1rem', fontSize: '1rem' }} onClick={handleAddNewProduct}>Guardar Producto</button>
+                <button style={{ flex: 1, padding: '1rem', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setIsModalOpen(false)}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

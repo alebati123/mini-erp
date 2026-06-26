@@ -194,7 +194,6 @@ export const AppProvider = ({ children }) => {
 
   const editProductUI = async (negocio, updatedItem) => {
     try {
-        // En copy, quitamos id y negocio para no grabarlos en las propiedades
         const { id, negocio: neg, ...updates } = updatedItem;
         await updateDoc(doc(db, 'inventory', id), updates);
         addNotification('✅ Producto editado manualmente.', 'success');
@@ -203,8 +202,17 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const addProductUI = async (negocio, newItem) => {
+    try {
+        await addDoc(collection(db, 'inventory'), { ...newItem, negocio });
+        addNotification('✅ Producto añadido manualmente.', 'success');
+    } catch(err) {
+        addNotification('❌ Error al añadir producto', 'danger');
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ data, updateInventoryAndBalance, deleteProductUI, editProductUI, notifications, addNotification }}>
+    <AppContext.Provider value={{ data, updateInventoryAndBalance, deleteProductUI, editProductUI, addProductUI, notifications, addNotification }}>
       {children}
     </AppContext.Provider>
   );
