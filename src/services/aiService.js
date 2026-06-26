@@ -1,97 +1,89 @@
+import { GoogleGenAI } from '@google/genai';
+
+// Inicializar el cliente usando la variable de entorno de Vite
+// Importante: No se recomienda subir la API Key en el frontend en un entorno real de producción.
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
 /**
  * SYSTEM PROMPT
- * 
- * Este prompt debe ser enviado como instrucción principal al inicializar
- * el modelo (ej. Google Gemini) cuando se conecte la API real.
+ * Instrucciones estrictas para que Gemini devuelva la información estructurada.
  */
 export const SYSTEM_PROMPT = `
 Eres un asistente de gestión integrado en un Mini ERP.
-El usuario ingresará comandos en lenguaje natural sobre ventas o compras de productos.
+El usuario ingresará comandos en lenguaje natural sobre ventas, compras, ediciones o eliminaciones de productos. Puede mencionar múltiples productos en la misma oración.
 
-Tus dos áreas de negocio son:
-1. 'Abshine': Venta de productos de estética vehicular, limpieza, acondicionadores, ceras, microfibras (Marcas típicas: K78, Toxic Shine).
-2. 'ab3D.impresiones': Servicio de impresión 3D, venta de piezas de PLA, PETG, ASA (ej. llaveros, soportes, macetas, rollos de filamento).
+Tus dos áreas de negocio son estrictamente:
+1. 'Abshine': Venta de productos de estética vehicular, limpieza, acondicionadores, ceras, microfibras (Marcas: K78, Toxic Shine).
+2. 'ab3D.impresiones': Servicio de impresión 3D, piezas de PLA, PETG, ASA (ej. llaveros, soportes, macetas, filamentos).
+(Debes respetar exactamente esta ortografía, con sus mayúsculas y minúsculas).
 
-Tu objetivo es analizar la oración y extraer la información en un objeto JSON estricto.
-La estructura requerida es:
-{
-  "operacion": "venta" | "compra",
-  "negocio": "Abshine" | "ab3D.impresiones",
-  "producto": "nombre simplificado del producto",
-  "cantidad": <numero_entero>,
-  "precio": <numero_entero | null>
-}
+Tu objetivo es analizar la oración y extraer la información en un ARREGLO (ARRAY) JSON. Si hay varios productos, cada uno debe ser un objeto independiente en el arreglo.
+La estructura requerida es estricta:
+[
+  {
+    "operacion": "venta" | "compra" | "edicion" | "eliminacion",
+    "negocio": "Abshine" | "ab3D.impresiones",
+    "producto": "nombre del producto en singular conservando medidas y evitando repetir el color o material si ya lo pones en su campo",
+    "cantidad": <numero_entero | null>,
+    "precio_venta": <numero_entero | null>,
+    "precio_compra": <numero_entero | null>,
+    "marca": "marca a actualizar o null",
+    "material": "material (PLA, PETG, etc.) si corresponde o null",
+    "color": "color del producto si corresponde o null",
+    "nuevo_nombre": "nuevo nombre del producto o null",
+    "categoria": "nueva categoria a actualizar o asignar, o null",
+    "nuevo_stock": <numero_entero | null>
+  }
+]
 
-Ejemplos:
-- Usuario: "Vendí 2 ceras rápidas a 6500" -> {"operacion": "venta", "negocio": "Abshine", "producto": "Cera Rápida", "cantidad": 2, "precio": 6500}
-- Usuario: "Compré 5 rollos de PLA blanco" -> {"operacion": "compra", "negocio": "ab3D.impresiones", "producto": "Rollo PLA", "cantidad": 5, "precio": null}
-
-REGLA ESTRICTA: Devuelve SOLAMENTE el bloque JSON. No incluyas markdown, saludos ni explicaciones.
+Reglas estrictas de negocio:
+- Devuelve SIEMPRE un ARRAY \`[]\` conteniendo los objetos, aunque sea un solo producto.
+- La "operacion" debe ser "compra", "venta", "edicion" o "eliminacion". (Ej: "compré", "ingresaron", "cargame" = compra. "vendí", "salieron" = venta).
+- NORMALIZACIÓN: Si el usuario escribe el producto en plural, conviértelo a singular.
+- CONSERVACIÓN DE DETALLES Y MEDIDAS (¡CRÍTICO!): El nombre del producto DEBE conservar íntegramente sus dimensiones, talles, detalles o medidas (ej. "30x30", "90*60", "500ml", "5L"). NO recortes esa parte del nombre.
+- EXTRACCIÓN DE ATRIBUTOS: Extrae explícitamente "marca" (ej: k78, toxic shine, oneshine), "material" (ej: PLA, PETG, resina), "color" (ej: negro, blanco) y "categoria" si el usuario los menciona, rellenando los campos correspondientes del JSON y evitando que queden en "null".
+- MÚLTIPLES VARIANTES: Si el usuario enumera una lista de colores, marcas o variantes para un mismo producto (ej. "compre 2 filamentos pla gris, marron, rosa, amarillo a 2000"), DEBES generar un objeto JSON separado para CADA color/variante. Cada objeto individual heredará la cantidad, precios, categoría, producto y material especificados, pero tendrá su propio atributo específico (su propio "color" o "marca").
+- REGLA DE EDICIÓN: Si el usuario pide cambiar "el tipo" o "la categoría", actualiza el campo "categoria" y NO MODIFIQUES EL NOMBRE DEL PRODUCTO ("nuevo_nombre": null). También puede cambiar el stock directamente enviando "nuevo_stock".
+- Extrae SIEMPRE "precio_venta", "precio_compra" y los atributos mencionados en la oración, sin importar qué tipo de operación sea.
+- SIEMPRE debes incluir el campo "negocio" deduciéndolo del tipo de producto.
 `;
 
 /**
- * Función asíncrona para procesar el comando del usuario mediante IA.
- * Actualmente simula la respuesta de un LLM.
+ * Función asíncrona para procesar el comando del usuario mediante la API real de Google Gemini.
  * @param {string} textoUsuario El mensaje ingresado por el usuario
  * @returns {Promise<Object>} Un objeto JSON con la operación parseada
  */
 export const procesarComandoIA = async (textoUsuario) => {
-  // Simulamos un delay de red (conexión con API de Gemini/OpenAI)
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: textoUsuario,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        // Exigir respuesta estrictamente en JSON
+        responseMimeType: 'application/json',
+      }
+    });
 
-  console.log("System Prompt a enviar:", SYSTEM_PROMPT);
-  console.log("Comando recibido del usuario:", textoUsuario);
-
-  const text = textoUsuario.toLowerCase();
-  
-  // ==========================================
-  // LÓGICA MOCK: Simulación de la respuesta IA
-  // Aquí es donde deberías conectar la llamada `fetch` a tu API de LLM.
-  // ==========================================
-  
-  let operacion = 'venta';
-  if (text.includes('compré') || text.includes('compre') || text.includes('compra')) {
-    operacion = 'compra';
-  }
-
-  let negocio = 'Abshine';
-  if (text.includes('3d') || text.includes('pla') || text.includes('soporte') || text.includes('maceta') || text.includes('llavero')) {
-    negocio = 'ab3D.impresiones';
-  }
-
-  // Extracción muy básica para el mock (la IA real haría esto perfectamente)
-  let cantidad = 1;
-  const matchNum = text.match(/\d+/);
-  if (matchNum) {
-    cantidad = parseInt(matchNum[0]);
-  }
-
-  let producto = 'Producto Desconocido';
-  if (text.includes('microfibra')) producto = 'Microfibra Premium';
-  if (text.includes('cera')) producto = 'Cera Rápida';
-  if (text.includes('shampoo')) producto = 'Shampoo Neutro';
-  if (text.includes('pla')) producto = 'Rollo PLA';
-  if (text.includes('llavero')) producto = 'Llavero Personalizado';
-  
-  let precio = null;
-  // Buscar precio después de un símbolo de $ o palabras clave (mock muy crudo)
-  const matchPrecio = text.match(/\$(\d+)/) || text.match(/a (\d+)/);
-  if (matchPrecio && matchPrecio[1]) {
-    // Evitar confundir la cantidad con el precio si son el mismo número
-    if (parseInt(matchPrecio[1]) !== cantidad || text.match(/\d+/g).length > 1) {
-      precio = parseInt(matchPrecio[1]);
+    const responseText = response.text;
+    
+    // Parseamos la respuesta, ya que Gemini la devolverá como JSON string
+    const jsonResponse = JSON.parse(responseText);
+    
+    // Validación mínima: Asegurar que sea un arreglo con al menos un elemento
+    if (!Array.isArray(jsonResponse) || jsonResponse.length === 0) {
+      throw new Error("El JSON devuelto por la IA no es un arreglo válido o está vacío.");
     }
+
+    console.log("Respuesta real de Gemini:", jsonResponse);
+
+    return jsonResponse;
+    
+  } catch (error) {
+    console.error("Error al procesar el comando con Gemini:", error);
+    if (error.message && (error.message.includes("429") || error.message.includes("quota"))) {
+      throw new Error("Límite de velocidad excedido.");
+    }
+    throw new Error("No se pudo procesar el comando o la IA devolvió un error.");
   }
-
-  const jsonResponse = {
-    operacion,
-    negocio,
-    producto,
-    cantidad,
-    precio
-  };
-
-  console.log("Respuesta simulada de la IA:", jsonResponse);
-
-  return jsonResponse;
 };

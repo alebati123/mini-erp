@@ -10,11 +10,11 @@ function App() {
   return (
     <AppProvider>
       <div className="app-container">
-        <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div className="main-content">
           <Dashboard />
           <Inventory />
         </div>
-        <div style={{ flex: 1, position: 'sticky', top: '2rem', height: 'calc(100vh - 4rem)' }}>
+        <div className="sidebar">
           <AIChat />
         </div>
         <ToastContainer />

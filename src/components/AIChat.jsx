@@ -30,22 +30,33 @@ const AIChat = () => {
     setIsLoading(true);
 
     try {
-      const responseJSON = await procesarComandoIA(userMessage);
+      const responseArray = await procesarComandoIA(userMessage);
       
-      updateInventoryAndBalance(
-        responseJSON.operacion,
-        responseJSON.negocio,
-        responseJSON.producto,
-        responseJSON.cantidad,
-        responseJSON.precio
-      );
+      let combinedMessage = "Entendido. Procesé las siguientes acciones:\n";
+      
+      responseArray.forEach(responseJSON => {
+          updateInventoryAndBalance(responseJSON);
+          
+          if (responseJSON.operacion === 'edicion') {
+              combinedMessage += `\n- Actualicé los datos de "${responseJSON.producto}" en ${responseJSON.negocio}.`;
+          } else if (responseJSON.operacion === 'eliminacion') {
+              combinedMessage += `\n- Eliminé el producto "${responseJSON.producto}" de ${responseJSON.negocio}.`;
+          } else {
+              combinedMessage += `\n- Registré una ${responseJSON.operacion} de ${responseJSON.cantidad || 1} unidad(es) de "${responseJSON.producto}" para ${responseJSON.negocio}.`;
+          }
+      });
 
-      const successMessage = `Entendido. Registré una ${responseJSON.operacion} de ${responseJSON.cantidad} unidad(es) de "${responseJSON.producto}" para ${responseJSON.negocio}.`;
-      setMessages(prev => [...prev, { id: Date.now(), text: successMessage, sender: 'ai' }]);
+      setMessages(prev => [...prev, { id: Date.now(), text: combinedMessage, sender: 'ai' }]);
       
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { id: Date.now(), text: "Hubo un error procesando tu solicitud.", sender: 'ai' }]);
+      
+      let errorMessage = "Ocurrió un error al procesar tu solicitud. Por favor, intenta de otra forma.";
+      if (error.message && error.message.includes("Límite de velocidad excedido")) {
+          errorMessage = "⚠️ Has excedido el límite gratuito de Google Gemini (20 peticiones por minuto). Por favor, espera 1 minuto y vuelve a enviar tu mensaje.";
+      }
+      
+      setMessages(prev => [...prev, { id: Date.now(), text: errorMessage, sender: 'ai' }]);
     } finally {
       setIsLoading(false);
     }

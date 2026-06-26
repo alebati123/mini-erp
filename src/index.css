@@ -41,6 +41,22 @@ body {
   margin: 0 auto;
 }
 
+.main-content {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-width: 0; /* Previene desbordamientos en flexbox */
+}
+
+.sidebar {
+  flex: 1;
+  position: sticky;
+  top: 2rem;
+  height: calc(100vh - 4rem);
+  min-width: 0;
+}
+
 /* Glassmorphism Panel Utilities */
 .glass-panel {
   background: var(--bg-panel);
@@ -125,10 +141,17 @@ tr:hover {
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .stock-badge.high { background: rgba(0, 230, 118, 0.2); color: var(--success); }
 .stock-badge.low { background: rgba(255, 23, 68, 0.2); color: var(--danger); }
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* Buttons & Inputs */
 button {
@@ -294,4 +317,69 @@ input[type="text"]:focus {
 .summary-card .value {
   font-size: 2rem;
   font-weight: 700;
+}
+
+/* --- Responsive Media Queries --- */
+@media (max-width: 1024px) {
+  .app-container {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1.5rem;
+  }
+
+  .sidebar {
+    position: relative;
+    top: 0;
+    height: auto;
+    min-height: 600px;
+  }
+  
+  .chat-container {
+    min-height: 600px;
+  }
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  h2 {
+    font-size: 1.3rem;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .glass-panel {
+    padding: 1rem;
+  }
+  
+  button {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  th, td {
+    padding: 0.8rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Ajustar los inputs en tablas para que no sean tan anchos y no rompan la vista móvil si se edita */
+  input[type="text"], input[type="number"] {
+    min-width: auto !important;
+    width: 100%;
+  }
+
+  .chat-input-wrapper {
+    flex-direction: column;
+  }
+  
+  .chat-input-wrapper button {
+    width: 100%;
+    padding: 1rem;
+    justify-content: center;
+  }
 }
