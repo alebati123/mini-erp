@@ -1,8 +1,17 @@
 import { GoogleGenAI } from '@google/genai';
 
-// Inicializar el cliente usando la variable de entorno de Vite
-// Importante: No se recomienda subir la API Key en el frontend en un entorno real de producción.
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+let ai = null;
+
+const getAIClient = () => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING");
+  }
+  if (!ai) {
+    ai = new GoogleGenAI({ apiKey });
+  }
+  return ai;
+};
 
 /**
  * SYSTEM PROMPT
@@ -55,7 +64,8 @@ Reglas estrictas de negocio:
  */
 export const procesarComandoIA = async (textoUsuario) => {
   try {
-    const response = await ai.models.generateContent({
+    const aiClient = getAIClient();
+    const response = await aiClient.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: textoUsuario,
       config: {
@@ -81,6 +91,9 @@ export const procesarComandoIA = async (textoUsuario) => {
     
   } catch (error) {
     console.error("Error al procesar el comando con Gemini:", error);
+    if (error.message === "API_KEY_MISSING") {
+      throw new Error("API_KEY_MISSING");
+    }
     if (error.message && (error.message.includes("429") || error.message.includes("quota"))) {
       throw new Error("Límite de velocidad excedido.");
     }

@@ -52,7 +52,9 @@ const AIChat = () => {
       console.error(error);
       
       let errorMessage = "Ocurrió un error al procesar tu solicitud. Por favor, intenta de otra forma.";
-      if (error.message && error.message.includes("Límite de velocidad excedido")) {
+      if (error.message === "API_KEY_MISSING") {
+          errorMessage = "⚠️ La Inteligencia Artificial está desactivada porque falta configurar la API Key. Por favor, configura VITE_GEMINI_API_KEY en tu entorno o panel de Vercel.";
+      } else if (error.message && error.message.includes("Límite de velocidad excedido")) {
           errorMessage = "⚠️ Has excedido el límite gratuito de Google Gemini (20 peticiones por minuto). Por favor, espera 1 minuto y vuelve a enviar tu mensaje.";
       }
       
