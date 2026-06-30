@@ -192,17 +192,19 @@ export const AppProvider = ({ children }) => {
     try {
         await deleteDoc(doc(db, 'inventory', id));
         addNotification('🗑️ Producto eliminado manualmente.', 'danger');
-    } catch(err) {
+    } catch(error) {
+        console.error("Error al eliminar producto:", error);
         addNotification('❌ Error al eliminar producto', 'danger');
     }
   };
 
   const editProductUI = async (negocio, updatedItem) => {
     try {
-        const { id, negocio: neg, ...updates } = updatedItem;
+        const { id, negocio: _neg, ...updates } = updatedItem;
         await updateDoc(doc(db, 'inventory', id), updates);
         addNotification('✅ Producto editado manualmente.', 'success');
-    } catch(err) {
+    } catch(error) {
+        console.error("Error al editar producto:", error);
         addNotification('❌ Error al editar producto', 'danger');
     }
   };
@@ -211,7 +213,8 @@ export const AppProvider = ({ children }) => {
     try {
         await addDoc(collection(db, 'inventory'), { ...newItem, negocio });
         addNotification('✅ Producto añadido manualmente.', 'success');
-    } catch(err) {
+    } catch(error) {
+        console.error("Error al añadir producto:", error);
         addNotification('❌ Error al añadir producto', 'danger');
     }
   };

@@ -47,7 +47,7 @@ La estructura requerida es estricta:
 ]
 
 Reglas estrictas de negocio:
-- Devuelve SIEMPRE un ARRAY `[]` conteniendo los objetos, aunque sea un solo producto.
+- Devuelve SIEMPRE un ARRAY \`[]\` conteniendo los objetos, aunque sea un solo producto.
 - La "operacion" debe ser "compra", "venta", "edicion", "eliminacion" o "carga". 
   - "compra": se compró algo nuevo (gasto de dinero). 
   - "venta": se vendió algo (ingreso de dinero). 
