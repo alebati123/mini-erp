@@ -68,7 +68,7 @@ export const AppProvider = ({ children }) => {
   };
 
   const updateInventoryAndBalance = async (payload) => {
-    const { operacion, negocio, producto, cantidad, precio_venta, precio_compra, marca, material, color, nuevo_nombre, categoria, nuevo_stock } = payload;
+    const { operacion, negocio, producto, cantidad, precio_venta, precio_compra, marca, material, color, nuevo_nombre, categoria, nuevo_stock, estado } = payload;
     const unitKey = negocio.toLowerCase().includes('abshine') ? 'abshine' : 'ab3d';
     const inventory = data[unitKey].inventory;
     
@@ -128,8 +128,8 @@ export const AppProvider = ({ children }) => {
           if (precio_compra) updates.precioCompra = precio_compra;
           if (marca) updates.marca = marca;
           if (material) updates.material = material;
-          if (color) updates.color = color;
           if (categoria) updates.tipo = categoria;
+          if (estado) updates.estado = estado;
           if (nuevo_stock !== undefined && nuevo_stock !== null) updates.stock = nuevo_stock;
           if (nuevo_nombre) updates.producto = nuevo_nombre;
           await updateDoc(itemRef, updates);
@@ -142,6 +142,8 @@ export const AppProvider = ({ children }) => {
         const amountChange = unitPrice * (cantidad || 1);
         await updateDoc(itemRef, { stock: currentItem.stock + (cantidad || 1) });
         await updateBalances(amountChange, false);
+      } else if (operacion === 'carga') {
+        await updateDoc(itemRef, { stock: currentItem.stock + (cantidad || 1) });
       }
     } else {
       if (operacion === 'edicion' || operacion === 'eliminacion') return; // No hacer nada si no existe
@@ -152,14 +154,15 @@ export const AppProvider = ({ children }) => {
       const newItem = {
         negocio: unitKey,
         producto,
-        stock: operacion === 'compra' ? (cantidad || 1) : -(cantidad || 1),
+        stock: (operacion === 'compra' || operacion === 'carga') ? (cantidad || 1) : -(cantidad || 1),
         precioVenta: pVenta,
         precioCompra: pCompra,
         marca: marca || 'N/A', 
         tipo: categoria || 'Nuevo', 
         volumen: 'N/A', 
         material: material || 'N/A', 
-        color: color || 'N/A'
+        color: color || 'N/A',
+        estado: estado || 'N/A'
       };
       
       await addDoc(collection(db, 'inventory'), newItem);
@@ -176,6 +179,8 @@ export const AppProvider = ({ children }) => {
         mensajeToast = `✏️ Producto "${payload.producto}" actualizado en ${payload.negocio}`;
     } else if (payload.operacion === 'eliminacion') {
         mensajeToast = `🗑️ Producto "${payload.producto}" eliminado de ${payload.negocio}`;
+    } else if (payload.operacion === 'carga') {
+        mensajeToast = `📦 Stock inicial agregado: +${payload.cantidad || 1} ${payload.producto} en ${payload.negocio}`;
     } else {
         const amountText = payload.precio_venta || payload.precio_compra ? ` registrado` : '';
         mensajeToast = `✅ ${payload.operacion === 'venta' ? 'Venta' : 'Compra'}: ${payload.operacion === 'compra' ? '+' : '-'}${payload.cantidad || 1} ${payload.producto} en ${payload.negocio}${amountText}`;

@@ -30,7 +30,7 @@ Tu objetivo es analizar la oración y extraer la información en un ARREGLO (ARR
 La estructura requerida es estricta:
 [
   {
-    "operacion": "venta" | "compra" | "edicion" | "eliminacion",
+    "operacion": "venta" | "compra" | "edicion" | "eliminacion" | "carga",
     "negocio": "Abshine" | "ab3D.impresiones",
     "producto": "nombre del producto en singular conservando medidas y evitando repetir el color o material si ya lo pones en su campo",
     "cantidad": <numero_entero | null>,
@@ -39,6 +39,7 @@ La estructura requerida es estricta:
     "marca": "marca a actualizar o null",
     "material": "material (PLA, PETG, etc.) si corresponde o null",
     "color": "color del producto si corresponde o null",
+    "estado": "estado de uso si se menciona para filamentos (ej: 'Nuevo', 'En Uso (Bastante)', 'En Uso (Mitad)', 'En Uso (Poco)') o null",
     "nuevo_nombre": "nuevo nombre del producto o null",
     "categoria": "nueva categoria a actualizar o asignar, o null",
     "nuevo_stock": <numero_entero | null>
@@ -46,8 +47,11 @@ La estructura requerida es estricta:
 ]
 
 Reglas estrictas de negocio:
-- Devuelve SIEMPRE un ARRAY \`[]\` conteniendo los objetos, aunque sea un solo producto.
-- La "operacion" debe ser "compra", "venta", "edicion" o "eliminacion". (Ej: "compré", "ingresaron", "cargame" = compra. "vendí", "salieron" = venta).
+- Devuelve SIEMPRE un ARRAY `[]` conteniendo los objetos, aunque sea un solo producto.
+- La "operacion" debe ser "compra", "venta", "edicion", "eliminacion" o "carga". 
+  - "compra": se compró algo nuevo (gasto de dinero). 
+  - "venta": se vendió algo (ingreso de dinero). 
+  - "carga": el usuario indica que YA TIENE stock o simplemente quiere agregar algo al inventario sin que se registre como una compra que descuenta dinero (ej: "tengo este producto", "tengo en stock 3 filamentos", "agregame un k78", "cargame 2 rollos").
 - NORMALIZACIÓN: Si el usuario escribe el producto en plural, conviértelo a singular.
 - CONSERVACIÓN DE DETALLES Y MEDIDAS (¡CRÍTICO!): El nombre del producto DEBE conservar íntegramente sus dimensiones, talles, detalles o medidas (ej. "30x30", "90*60", "500ml", "5L"). NO recortes esa parte del nombre.
 - EXTRACCIÓN DE ATRIBUTOS: Extrae explícitamente "marca" (ej: k78, toxic shine, oneshine), "material" (ej: PLA, PETG, resina), "color" (ej: negro, blanco) y "categoria" si el usuario los menciona, rellenando los campos correspondientes del JSON y evitando que queden en "null".

@@ -9,7 +9,9 @@ const Inventory = () => {
   const [editingId, setEditingId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newProductForm, setNewProductForm] = useState({ producto: '', tipo: '', precioCompra: 0, precioVenta: 0, stock: 0, marca: 'N/A', material: 'N/A', color: 'N/A' });
+  const [newProductForm, setNewProductForm] = useState({ producto: '', tipo: '', precioCompra: 0, precioVenta: 0, stock: 0, marca: 'N/A', material: 'N/A', color: 'N/A', estado: 'N/A' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   const handleEditClick = (item) => {
     setEditingId(item.id);
@@ -49,13 +51,68 @@ const Inventory = () => {
     };
     addProductUI(activeTab, finalProduct);
     setIsModalOpen(false);
-    setNewProductForm({ producto: '', tipo: '', precioCompra: 0, precioVenta: 0, stock: 0, marca: 'N/A', material: 'N/A', color: 'N/A' });
+    setNewProductForm({ producto: '', tipo: '', precioCompra: 0, precioVenta: 0, stock: 0, marca: 'N/A', material: 'N/A', color: 'N/A', estado: 'N/A' });
   };
 
   const inventoryData = activeTab === 'abshine' ? data.abshine.inventory : data.ab3d.inventory;
 
+  const totalValuation = inventoryData.reduce((acc, item) => {
+    return acc + (item.stock > 0 ? item.stock * (item.precioCompra || 0) : 0);
+  }, 0);
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
+  };
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const filteredAndSortedData = React.useMemo(() => {
+    let processData = [...inventoryData];
+
+    if (searchTerm) {
+      const lowerTerm = searchTerm.toLowerCase();
+      processData = processData.filter(item => {
+        return (
+          item.producto?.toLowerCase().includes(lowerTerm) ||
+          item.marca?.toLowerCase().includes(lowerTerm) ||
+          item.material?.toLowerCase().includes(lowerTerm) ||
+          item.color?.toLowerCase().includes(lowerTerm) ||
+          item.tipo?.toLowerCase().includes(lowerTerm) ||
+          item.estado?.toLowerCase().includes(lowerTerm)
+        );
+      });
+    }
+
+    if (sortConfig.key) {
+      processData.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+        
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return processData;
+  }, [inventoryData, searchTerm, sortConfig]);
+
+  const renderSortIndicator = (key) => {
+    if (sortConfig.key !== key) return null;
+    return <span style={{ marginLeft: '4px', fontSize: '0.8rem' }}>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>;
   };
 
   return (
@@ -82,25 +139,43 @@ const Inventory = () => {
           <button className="btn-primary" style={{ padding: '0.6rem 1rem', fontSize: '0.9rem', borderRadius: '8px', marginLeft: '1rem' }} onClick={() => setIsModalOpen(true)}>+ Nuevo Producto</button>
         </div>
       </div>
+      
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ flex: 1, minWidth: '250px' }}>
+            <input 
+              type="text" 
+              placeholder="Buscar por nombre, color, material, marca..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} 
+            />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1rem', background: 'rgba(255,255,255,0.05)', padding: '0.8rem 1.2rem', borderRadius: '8px', borderLeft: `4px solid ${activeTab === 'abshine' ? 'var(--primary)' : 'var(--ab3d)'}` }}>
+        <h4 style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Valorización del Stock (Costo)</h4>
+        <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{formatCurrency(totalValuation)}</p>
+      </div>
 
       <div className="table-responsive">
         <table>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Producto</th>
-              {activeTab === 'abshine' && <th>Marca</th>}
-              {activeTab === 'ab3d' && <th>Material</th>}
-              {activeTab === 'ab3d' && <th>Color</th>}
-              <th>Categoría</th>
-              <th>Precio Compra</th>
-              <th>Precio Venta</th>
-              <th>Stock</th>
+              <th onClick={() => handleSort('id')} style={{ cursor: 'pointer' }}>ID {renderSortIndicator('id')}</th>
+              <th onClick={() => handleSort('producto')} style={{ cursor: 'pointer' }}>Producto {renderSortIndicator('producto')}</th>
+              {activeTab === 'abshine' && <th onClick={() => handleSort('marca')} style={{ cursor: 'pointer' }}>Marca {renderSortIndicator('marca')}</th>}
+              {activeTab === 'ab3d' && <th onClick={() => handleSort('material')} style={{ cursor: 'pointer' }}>Material {renderSortIndicator('material')}</th>}
+              {activeTab === 'ab3d' && <th onClick={() => handleSort('color')} style={{ cursor: 'pointer' }}>Color {renderSortIndicator('color')}</th>}
+              {activeTab === 'ab3d' && <th onClick={() => handleSort('estado')} style={{ cursor: 'pointer' }}>Estado {renderSortIndicator('estado')}</th>}
+              <th onClick={() => handleSort('tipo')} style={{ cursor: 'pointer' }}>Categoría {renderSortIndicator('tipo')}</th>
+              <th onClick={() => handleSort('precioCompra')} style={{ cursor: 'pointer' }}>Precio Compra {renderSortIndicator('precioCompra')}</th>
+              <th onClick={() => handleSort('precioVenta')} style={{ cursor: 'pointer' }}>Precio Venta {renderSortIndicator('precioVenta')}</th>
+              <th onClick={() => handleSort('stock')} style={{ cursor: 'pointer' }}>Stock {renderSortIndicator('stock')}</th>
               <th style={{ textAlign: 'center' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {inventoryData.map((item) => (
+            {filteredAndSortedData.map((item) => (
               <tr key={item.id}>
                 {editingId === item.id ? (
                   <>
@@ -109,6 +184,15 @@ const Inventory = () => {
                     {activeTab === 'abshine' && <td><input type="text" value={editFormData.marca} onChange={(e) => handleFormChange('marca', e.target.value)} style={{ padding: '0.4rem', borderRadius: '4px', width: '100%', minWidth: '80px' }} /></td>}
                     {activeTab === 'ab3d' && <td><input type="text" value={editFormData.material} onChange={(e) => handleFormChange('material', e.target.value)} style={{ padding: '0.4rem', borderRadius: '4px', width: '100%', minWidth: '80px' }} /></td>}
                     {activeTab === 'ab3d' && <td><input type="text" value={editFormData.color} onChange={(e) => handleFormChange('color', e.target.value)} style={{ padding: '0.4rem', borderRadius: '4px', width: '100%', minWidth: '80px' }} /></td>}
+                    {activeTab === 'ab3d' && <td>
+                        <select value={editFormData.estado || 'N/A'} onChange={(e) => handleFormChange('estado', e.target.value)} style={{ padding: '0.4rem', borderRadius: '4px', width: '100%', minWidth: '100px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid var(--glass-border)' }}>
+                            <option value="N/A">N/A</option>
+                            <option value="Nuevo">Nuevo</option>
+                            <option value="En Uso (Bastante)">En Uso (Bastante)</option>
+                            <option value="En Uso (Mitad)">En Uso (Mitad)</option>
+                            <option value="En Uso (Poco)">En Uso (Poco)</option>
+                        </select>
+                    </td>}
                     <td><input type="text" value={editFormData.tipo} onChange={(e) => handleFormChange('tipo', e.target.value)} style={{ padding: '0.4rem', borderRadius: '4px', width: '100%', minWidth: '100px' }} /></td>
                     <td><input type="number" value={editFormData.precioCompra} onChange={(e) => handleFormChange('precioCompra', e.target.value)} style={{ padding: '0.4rem', borderRadius: '4px', width: '100%', minWidth: '80px' }} /></td>
                     <td><input type="number" value={editFormData.precioVenta} onChange={(e) => handleFormChange('precioVenta', e.target.value)} style={{ padding: '0.4rem', borderRadius: '4px', width: '100%', minWidth: '80px' }} /></td>
@@ -127,6 +211,11 @@ const Inventory = () => {
                     {activeTab === 'abshine' && <td>{item.marca}</td>}
                     {activeTab === 'ab3d' && <td>{item.material}</td>}
                     {activeTab === 'ab3d' && <td>{item.color}</td>}
+                    {activeTab === 'ab3d' && <td>
+                        <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', borderRadius: '4px', background: item.estado === 'Nuevo' ? 'rgba(0, 230, 118, 0.2)' : item.estado?.includes('Uso') ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 255, 255, 0.1)', color: item.estado === 'Nuevo' ? 'var(--success)' : item.estado?.includes('Uso') ? '#ff9800' : 'white' }}>
+                            {item.estado || 'N/A'}
+                        </span>
+                    </td>}
                     <td>{item.tipo}</td>
                     <td>{formatCurrency(item.precioCompra)}</td>
                     <td>{formatCurrency(item.precioVenta)}</td>
@@ -167,16 +256,30 @@ const Inventory = () => {
               )}
 
               {activeTab === 'ab3d' && (
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Material</label>
-                    <input type="text" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.material} onChange={(e) => setNewProductForm({...newProductForm, material: e.target.value})} />
+                <>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Material</label>
+                      <input type="text" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.material} onChange={(e) => setNewProductForm({...newProductForm, material: e.target.value})} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Color</label>
+                      <input type="text" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.color} onChange={(e) => setNewProductForm({...newProductForm, color: e.target.value})} />
+                    </div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Color</label>
-                    <input type="text" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.color} onChange={(e) => setNewProductForm({...newProductForm, color: e.target.value})} />
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Estado del Rollo (opcional)</label>
+                      <select style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: 'white' }} value={newProductForm.estado} onChange={(e) => setNewProductForm({...newProductForm, estado: e.target.value})}>
+                          <option value="N/A">N/A</option>
+                          <option value="Nuevo">Nuevo</option>
+                          <option value="En Uso (Bastante)">En Uso (Bastante)</option>
+                          <option value="En Uso (Mitad)">En Uso (Mitad)</option>
+                          <option value="En Uso (Poco)">En Uso (Poco)</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               <div style={{ display: 'flex', gap: '1rem' }}>
